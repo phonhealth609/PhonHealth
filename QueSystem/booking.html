@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จองคิวออนไลน์ - PCU Phon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./styles.css" rel="stylesheet">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 text-gray-800">
+
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden glass">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white text-center">
+            <h1 class="text-2xl font-bold">โรงพยาบาลส่งเสริมสุขภาพ</h1>
+            <p class="text-blue-100 mt-1">จองคิวตรวจออนไลน์</p>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-4">
+            
+            <div id="loading" class="hidden text-center py-4">
+                <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                <p class="text-gray-500 mt-2">กำลังโหลด...</p>
+            </div>
+
+            <!-- Booking Form -->
+            <form id="bookingForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">แผนกที่ต้องการตรวจ</label>
+                    <select id="dept" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <option value="MED">MED - อายุรกรรม</option>
+                        <option value="PED">PED - กุมารเวชกรรม</option>
+                        <option value="ENT">ENT - หู คอ จมูก</option>
+                        <option value="DENT">DENT - ทันตกรรม</option> 
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล (ผู้ป่วย)</label>
+                    <input type="text" id="name" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="ระบุชื่อจริง นามสกุล">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ 4 ตัวท้าย</label>
+                    <input type="tel" id="p4" maxlength="4" pattern="\d{4}" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center text-lg tracking-widest transition" placeholder="XXXX">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-95">
+                    ยืนยันจองคิว
+                </button>
+            </form>
+
+            <!-- Success/Error Result -->
+            <div id="result" class="hidden text-center space-y-4 animate-pulse-slow">
+                <!-- Dynamic Content -->
+            </div>
+
+        </div>
+
+        <div class="bg-gray-50 p-4 text-center text-xs text-gray-400">
+            ระบบจองคิวอัตโนมัติ PCU Phon
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script src="./app.js"></script>
+    <script>
+        let lineUserId = "";
+
+        // Auto-select department from URL if present
+        const urlParams = new URLSearchParams(window.location.search);
+        const deptParam = urlParams.get('dept_id');
+        if (deptParam) {
+            const select = document.getElementById('dept');
+            if ([...select.options].some(o => o.value === deptParam)) {
+                select.value = deptParam;
+            }
+        }
+
+        async function initLiff() {
+            try {
+                // Initialize LIFF specific to user's LIFF ID if provided, otherwise leave as placeholder or rely on external browser context if not strict LIFF
+                await liff.init({ liffId: "YOUR_LIFF_ID_HERE" }); // User to replace
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    lineUserId = profile.userId;
+                    // Auto-fill name if available? No, patient label usually manual
+                } else {
+                    // For testing in browser without LIFF
+                    console.log("LIFF not logged in or external browser");
+                    lineUserId = "TEST_USER_" + Math.floor(Math.random() * 1000);
+                }
+            } catch (e) {
+                console.warn("LIFF Init Failed (likely invalid ID for localhost/testing):", e);
+                // Fallback for non-LIFF environment
+                lineUserId = "NON_LIFF_USER"; 
+            }
+        }
+        initLiff();
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const dept_id = document.getElementById("dept").value;
+            const patient_label = document.getElementById("name").value.trim();
+            const phone_last4 = document.getElementById("p4").value.trim();
+
+            if (!patient_label || phone_last4.length !== 4) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+                return;
+            }
+
+            // UI Loading
+            document.getElementById('bookingForm').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+
+            const res = await postAction("queue.book", { dept_id, patient_label, phone_last4, line_user_id: lineUserId });
+
+            document.getElementById('loading').classList.add('hidden');
+            const resultDiv = document.getElementById('result');
+            resultDiv.classList.remove('hidden');
+
+            if (res.ok) {
+                resultDiv.innerHTML = `
+                    <div class="bg-green-100 text-green-800 p-4 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h2 class="text-xl font-bold">จองคิวสำเร็จ!</h2>
+                        <div class="mt-4">
+                            <p class="text-sm text-gray-600">หมายเลขคิวของคุณ</p>
+                            <p class="text-5xl font-extrabold text-blue-600 my-2">${res.queue_no}</p>
+                            <p class="text-sm">เรียกถึงคิวที่: <b>${res.current_called_no}</b></p>
+                            <p class="text-sm text-gray-500">รออีก ${res.ahead_count} คิว</p>
+                        </div>
+                    </div>
+                    <a href="status.html?dept_id=${dept_id}" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg mt-4 transition border border-gray-300">
+                        ตรวจสอบสถานะล่าสุด
+                    </a>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-100 text-red-800 p-4 rounded-xl">
+                        <h2 class="text-lg font-bold">เกิดข้อผิดพลาด</h2>
+                        <p>${res.error}</p>
+                    </div>
+                     <button onclick="location.reload()" class="block w-full bg-gray-600 text-white font-bold py-3 rounded-lg mt-4">ลองใหม่</button>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

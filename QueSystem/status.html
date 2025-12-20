@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สถานะคิว - PCU Phon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./styles.css" rel="stylesheet">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 text-gray-800">
+
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden glass">
+        <div class="bg-gradient-to-r from-teal-500 to-green-500 p-6 text-white text-center">
+            <h1 class="text-2xl font-bold">สถานะตั๋วคิว</h1>
+            <p class="text-green-100 mt-1">ตรวจสอบลำดับของคุณ</p>
+        </div>
+
+        <div class="p-6">
+            <div id="loader" class="text-center py-8">
+                <div class="animate-spin h-8 w-8 border-4 border-teal-500 border-t-transparent rounded-full mx-auto">
+                </div>
+            </div>
+
+            <div id="content" class="hidden space-y-6 text-center">
+
+                <div id="queue-info"
+                    class="bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm relative overflow-hidden">
+                    <span id="badge"
+                        class="absolute top-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-bl-lg">BOOKED</span>
+                    <p class="text-sm text-gray-500 mb-1">คิวของคุณ</p>
+                    <p id="my-q" class="text-6xl font-black text-gray-800 tracking-tighter">-</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-500 uppercase font-bold">คิวที่กำลังเรียก</p>
+                        <p id="current-q" class="text-3xl font-bold text-blue-700 mt-1">-</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                        <p class="text-xs text-orange-500 uppercase font-bold">รออีก (คิว)</p>
+                        <p id="wait-count" class="text-3xl font-bold text-orange-700 mt-1">-</p>
+                    </div>
+                </div>
+
+                <button onclick="fetchStatus()"
+                    class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow transition flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    รีเฟรชสถานะ
+                </button>
+            </div>
+
+            <div id="error-msg" class="hidden text-center text-red-500 py-4"></div>
+        </div>
+    </div>
+
+    <script src="./app.js"></script>
+    <script>
+        let lineUserId = "";
+        let deptId = "MED"; // Default, should specific
+
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('dept_id')) deptId = urlParams.get('dept_id');
+
+            // LIFF Init
+            try {
+                await liff.init({ liffId: "YOUR_LIFF_ID_HERE" }); // User to replace
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    lineUserId = profile.userId;
+                    fetchStatus();
+                } else {
+                    // console.warn("Not logged in");
+                    // Mock for browser
+                    lineUserId = "TEST_USER_961"; // Mock ID
+                    fetchStatus();
+                }
+            } catch (e) {
+                lineUserId = "NON_LIFF_USER";
+                fetchStatus();
+            }
+        }
+
+        async function fetchStatus() {
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('content').classList.add('hidden');
+            document.getElementById('error-msg').classList.add('hidden');
+
+            const res = await getAction("queue.myStatus", { dept_id: deptId, line_user_id: lineUserId });
+
+            document.getElementById('loader').classList.add('hidden');
+
+            if (res.ok) {
+                if (!res.has_queue) {
+                    showError("ไม่พบข้อมูลคิวของคุณในวันนี้");
+                    return;
+                }
+                document.getElementById('content').classList.remove('hidden');
+
+                document.getElementById('my-q').textContent = res.queue_no;
+                document.getElementById('current-q').textContent = res.current_called_no;
+                document.getElementById('wait-count').textContent = res.ahead_count;
+                document.getElementById('badge').textContent = res.status;
+
+                // Color logic
+                const badge = document.getElementById('badge');
+                if (res.status === 'CALLED') badge.className = "absolute top-0 right-0 bg-green-500 text-white text-xs px-2 py-1 rounded-bl-lg";
+                else if (res.status === 'SERVED') badge.className = "absolute top-0 right-0 bg-gray-500 text-white text-xs px-2 py-1 rounded-bl-lg";
+
+            } else {
+                showError(res.error || "ดึงข้อมูลล้มเหลว");
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            // Provide back button
+            el.innerHTML += `<br><a href="booking.html" class="inline-block mt-4 text-blue-500 underline">ไปหน้าจองคิว</a>`;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
