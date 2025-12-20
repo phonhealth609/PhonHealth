@@ -132,14 +132,23 @@
             resultDiv.classList.remove('hidden');
 
             if (res.ok) {
-                if (res.flex_reply && liff.isInClient()) {
+                // Client-side Flex Message Generation
+                const flexMsg = createFlexMessage(
+                    res.queue_no,
+                    res.current_called_no,
+                    res.ahead_count,
+                    res.dept_name,
+                    new Date().toLocaleDateString('th-TH')
+                );
+
+                if (liff.isInClient()) {
                     try {
-                        await liff.sendMessages(Array.isArray(res.flex_reply) ? res.flex_reply : [res.flex_reply]);
+                        await liff.sendMessages([flexMsg]);
                     } catch (err) {
                         console.error("Error sending Flex Message:", err);
-                        // Optional: show a small toast or alert? for now ignore
                     }
                 }
+
 
                 resultDiv.innerHTML = `
                     <div class="bg-green-100 text-green-800 p-4 rounded-xl">
@@ -169,6 +178,192 @@
                 `;
             }
         });
+    </script>
+    <script>
+        function createFlexMessage(queue_no, called_no, ahead, dept_name, dateStr) {
+            return {
+                "type": "flex",
+                "altText": "บัตรคิวของคุณ: " + queue_no,
+                "contents": {
+                    "type": "bubble",
+                    "size": "mega",
+                    "header": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "บัตรคิวออนไลน์",
+                                "weight": "bold",
+                                "color": "#ffffff",
+                                "size": "lg"
+                            },
+                            {
+                                "type": "text",
+                                "text": "ศูนย์แพทย์ชุมชนเมืองพล",
+                                "color": "#ffffffcc",
+                                "size": "xs",
+                                "margin": "sm"
+                            }
+                        ],
+                        "backgroundColor": "#0284c7",
+                        "paddingTop": "15px",
+                        "paddingBottom": "15px",
+                        "paddingStart": "20px",
+                        "paddingEnd": "20px"
+                    },
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "หมายเลขคิว",
+                                "weight": "bold",
+                                "color": "#aaaaaa",
+                                "size": "xs",
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": queue_no,
+                                "weight": "bold",
+                                "size": "4xl",
+                                "align": "center",
+                                "color": "#0284c7",
+                                "margin": "md"
+                            },
+                            {
+                                "type": "separator",
+                                "margin": "lg"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "margin": "lg",
+                                "spacing": "sm",
+                                "contents": [
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "แผนก",
+                                                "color": "#aaaaaa",
+                                                "size": "sm",
+                                                "flex": 2
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": dept_name || "-",
+                                                "wrap": true,
+                                                "color": "#666666",
+                                                "size": "sm",
+                                                "flex": 4,
+                                                "weight": "bold"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "วันที่",
+                                                "color": "#aaaaaa",
+                                                "size": "sm",
+                                                "flex": 2
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": dateStr || "-",
+                                                "wrap": true,
+                                                "color": "#666666",
+                                                "size": "sm",
+                                                "flex": 4
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "คิวที่เรียก",
+                                                "color": "#aaaaaa",
+                                                "size": "sm",
+                                                "flex": 2
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": String(called_no),
+                                                "wrap": true,
+                                                "color": "#666666",
+                                                "size": "sm",
+                                                "flex": 4
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "รออีก",
+                                                "color": "#aaaaaa",
+                                                "size": "sm",
+                                                "flex": 2
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": ahead + " คิว",
+                                                "wrap": true,
+                                                "color": "#eab308",
+                                                "size": "sm",
+                                                "flex": 4,
+                                                "weight": "bold"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "footer": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "uri",
+                                    "label": "ตรวจสอบสถานะล่าสุด",
+                                    "uri": "https://phonhealth609.github.io/PhonHealth/QueSystem/docs/status.html"
+                                },
+                                "style": "primary",
+                                "color": "#0284c7"
+                            },
+                            {
+                                "type": "text",
+                                "text": "กรุณามาถึงก่อนเวลาเรียกคิว 10 นาที",
+                                "size": "xxs",
+                                "color": "#aaaaaa",
+                                "align": "center",
+                                "margin": "md"
+                            }
+                        ]
+                    }
+                }
+            };
+        }
     </script>
 </body>
 
