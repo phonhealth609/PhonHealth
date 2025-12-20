@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PCU Phon - Broadcast</title>
+    <title>Camma Broadcast</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -122,11 +122,11 @@
                             </div>
 
                             <!-- Field: Link URL -->
-                            <div v-if="['flex_image_url'].includes(form.messageType)">
+                            <div v-if="['flex_image_url', 'flex_link_large'].includes(form.messageType)">
                                 <label class="block text-gray-700 font-bold mb-2">ลิงก์ปลายทาง (Target URL)</label>
                                 <input type="text" v-model="form.linkUrl"
                                     class="w-full border border-gray-300 rounded-lg p-3" placeholder="https://...">
-                                <p class="text-xs text-gray-400 mt-1">เมื่อผู้ใช้กดที่รูป จะเปิดลิงก์นี้</p>
+                                <p class="text-xs text-gray-400 mt-1">เมื่อผู้ใช้กดปุ่ม จะเปิดลิงก์นี้</p>
                             </div>
 
                             <!-- Recipient Selection -->
@@ -186,6 +186,15 @@
                                     </div>
                                 </div>
 
+                                <div v-if="form.messageType === 'flex_link_large'"
+                                    class="bg-white p-4 rounded-xl rounded-tl-none self-start max-w-[90%] shadow-sm border border-gray-100 flex flex-col items-center gap-3 text-center">
+                                    <div class="text-[#1DB446] font-bold text-xl">คุณหมอพร้อมแล้ว</div>
+                                    <div class="text-gray-600 text-sm">กดปุ่มด้านล่างเพื่อเริ่มสนทนา</div>
+                                    <div
+                                        class="w-full h-10 bg-[#06C755] rounded flex items-center justify-center text-white font-bold">
+                                        พร้อม</div>
+                                </div>
+
                                 <div v-if="!form.text && !form.imageUrl"
                                     class="flex-1 flex items-center justify-center text-white/50 text-xs">
                                     Preview Area
@@ -228,10 +237,11 @@
                 const selectedUsers = ref([]); // Array IDs for Group
 
                 const msgTypes = [
-                    { id: 'flex_image_url', label: 'ส่งรูปและ URL', icon: 'fa-solid fa-link' },
-                    { id: 'image', label: 'ส่งรูปอย่างเดียว', icon: 'fa-regular fa-image' },
-                    { id: 'text', label: 'ส่งข้อความอย่างเดียว', icon: 'fa-regular fa-comment-dots' },
-                    { id: 'mixed', label: 'ข้อความ + รูป', icon: 'fa-solid fa-layer-group' }
+                    { id: 'flex_image_url', label: 'ส่งลิงก์และรูป', icon: 'fa-solid fa-link' },
+                    { id: 'image', label: 'รูปภาพ', icon: 'fa-regular fa-image' },
+                    { id: 'text', label: 'ข้อความ', icon: 'fa-regular fa-comment-dots' },
+                    { id: 'mixed', label: 'ข้อความ+รูป', icon: 'fa-solid fa-layer-group' },
+                    { id: 'flex_link_large', label: 'ส่งลิงก์ คุยกับหมอ', icon: 'fa-solid fa-user-doctor' }
                 ];
 
                 const form = ref({
