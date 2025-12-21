@@ -137,29 +137,13 @@
 
     <script src="./app.js"></script>
     <script>
+        // --- State ---
         let pin = localStorage.getItem('staff_pin') || '';
-
-        function login() {
-            const p = document.getElementById('staff-pin').value;
-            if (p) {
-                pin = p;
-                localStorage.setItem('staff_pin', pin);
-                document.getElementById('auth-modal').classList.add('hidden');
-                document.getElementById('dashboard').classList.remove('hidden');
-                refreshDashboard();
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('staff_pin');
-            location.reload();
-        }
-
-        if (pin) login(); // Auto login if has pin
 
         // --- UI Helpers ---
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
+            if (!container) return;
             const el = document.createElement('div');
             const colors = type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
             el.className = `toast ${colors} px-6 py-3 rounded-lg shadow-lg font-bold flex items-center gap-2`;
@@ -177,18 +161,30 @@
             if (!btn) return;
             if (isLoading) {
                 btn.dataset.text = btn.innerText;
-                btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
+                // Simple Loading Text to avoid SVG syntax issues in potential parsing
+                btn.innerHTML = `<span class="animate-spin inline-block mr-2">↻</span> Processing...`;
                 btn.disabled = true;
                 btn.classList.add('opacity-75', 'cursor-not-allowed');
             } else {
-                btn.innerHTML = btn.dataset.text || btn.innerText; // Restoration might lose icon if simple text used. Special handling for Call Next needed.
+                btn.innerHTML = btn.dataset.text || btn.innerText;
                 btn.disabled = false;
                 btn.classList.remove('opacity-75', 'cursor-not-allowed');
             }
         }
 
+        // --- Core Functions ---
         async function refreshDashboard() {
+            // If dashboard is hidden, don't refresh loop aggressively to save calls? 
+            // But we need it for updates. logic is fine.
+            if (document.getElementById('dashboard').classList.contains('hidden')) return;
+
             const dept = document.getElementById('dept-select').value;
+            // Guard against undefined getAction (e.g. app.js failed)
+            if (typeof getAction === 'undefined') {
+                console.error("app.js not loaded");
+                return;
+            }
+
             const res = await getAction("dashboard.summary", { dept_id: dept });
 
             if (res.ok) {
@@ -200,7 +196,6 @@
                 if (res.status === 'OPEN') {
                     statusEl.textContent = '🟢 เปิดรับคิว';
                     statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-green-500 shadow-lg border-2 border-green-600';
-                    // Visual cues for buttons
                     btnOpen.classList.add('hidden');
                     btnClose.classList.remove('hidden');
                 } else {
@@ -223,6 +218,11 @@
 
                         const time = new Date(b.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
+                        // Mark Served Button logic
+                        const actionBtn = b.status !== 'SERVED'
+                            ? `<button onclick="markServed('${b.queue_id}')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">จบงาน</button>`
+                            : '<span class="text-green-500">✓</span>';
+
                         tbody.innerHTML += `
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="p-4 text-gray-500 text-sm">${time}</td>
@@ -230,9 +230,7 @@
                                 <td class="p-4">${b.patient_label}</td>
                                 <td class="p-4"><span class="bg-gray-200 text-xs px-2 py-1 rounded">${b.source}</span></td>
                                 <td class="p-4 ${statusColor}">${b.status}</td>
-                                <td class="p-4 text-right">
-                                    ${b.status !== 'SERVED' ? `<button onclick="markServed('${b.queue_id}')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">จบงาน</button>` : '<span class="text-green-500">✓</span>'}
-                                </td>
+                                <td class="p-4 text-right">${actionBtn}</td>
                             </tr>
                         `;
                     });
@@ -242,23 +240,13 @@
             }
         }
 
-        async function markServed(qId) {
-            const res = await postAction("queue.markServed", { queue_id: qId, staff_pin: pin });
-            if (res.ok) {
-                showToast('จบงานเรียบร้อย', 'success');
-                refreshDashboard();
-            } else {
-                showToast('Error: ' + res.error, 'error');
-            }
-        }
-
         async function callNext() {
             if (!confirm('ยืนยันเรียกคิวถัดไป?')) return;
 
-            // Custom loading for call button to keep icon
             const btn = document.getElementById('btn-call');
             const originalContent = btn.innerHTML;
-            btn.innerHTML = `<svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="ml-2">กำลังเรียก...</span>`;
+            // Simple spinner
+            btn.innerHTML = `<span class="animate-spin inline-block mr-2 text-2xl">↻</span> กำลังเรียก...`;
             btn.disabled = true;
             btn.classList.add('opacity-75');
 
@@ -302,7 +290,6 @@
             if (!confirm(`ยืนยันเปลี่ยนสถานะเป็น ${status}?`)) return;
             const action = status === 'OPEN' ? 'day.open' : 'day.close';
 
-            // setBtnLoading when we have IDs for these buttons
             const res = await postAction(action, { staff_pin: pin });
 
             if (res.ok) {
@@ -313,11 +300,41 @@
             }
         }
 
+        async function markServed(qId) {
+            const res = await postAction("queue.markServed", { queue_id: qId, staff_pin: pin });
+            if (res.ok) {
+                showToast('จบงานเรียบร้อย', 'success');
+                refreshDashboard();
+            } else {
+                showToast('Error: ' + res.error, 'error');
+            }
+        }
 
+        // --- Auth & Init ---
+        function login() {
+            const p = document.getElementById('staff-pin').value;
+            if (p) {
+                pin = p;
+                localStorage.setItem('staff_pin', pin);
+                document.getElementById('auth-modal').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                refreshDashboard();
+            }
+        }
 
-        // Auto refresh
+        function logout() {
+            localStorage.removeItem('staff_pin');
+            location.reload();
+        }
+
+        // Auto Init
+        if (pin) {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            refreshDashboard();
+        }
+
         setInterval(refreshDashboard, 5000);
-
     </script>
 </body>
 
