@@ -150,13 +150,13 @@
                     statusEl.textContent = '🟢 เปิดรับคิว';
                     statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-green-500 shadow-lg border-2 border-green-600';
                     // Visual cues for buttons
-                    btnOpen.classList.add('opacity-50', 'cursor-not-allowed', 'hidden');
-                    btnClose.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
+                    btnOpen.classList.add('hidden');
+                    btnClose.classList.remove('hidden');
                 } else {
                     statusEl.textContent = '🔴 ปิดรับคิว';
                     statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-red-500 shadow-lg border-2 border-red-600';
-                    btnOpen.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
-                    btnClose.classList.add('opacity-50', 'cursor-not-allowed', 'hidden');
+                    btnOpen.classList.remove('hidden');
+                    btnClose.classList.add('hidden');
                 }
 
                 document.getElementById('current-q-display').textContent = res.current_called_queue || '-';
