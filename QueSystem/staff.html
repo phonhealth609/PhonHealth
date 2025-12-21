@@ -11,6 +11,27 @@
 
 <body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <style>
+        .toast {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+
     <!-- Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
@@ -136,6 +157,36 @@
 
         if (pin) login(); // Auto login if has pin
 
+        // --- UI Helpers ---
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const colors = type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
+            el.className = `toast ${colors} px-6 py-3 rounded-lg shadow-lg font-bold flex items-center gap-2`;
+            el.innerHTML = `<span>${msg}</span>`;
+
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }, 3000);
+        }
+
+        function setBtnLoading(id, isLoading) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            if (isLoading) {
+                btn.dataset.text = btn.innerText;
+                btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+            } else {
+                btn.innerHTML = btn.dataset.text || btn.innerText; // Restoration might lose icon if simple text used. Special handling for Call Next needed.
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        }
+
         async function refreshDashboard() {
             const dept = document.getElementById('dept-select').value;
             const res = await getAction("dashboard.summary", { dept_id: dept });
@@ -164,7 +215,7 @@
                 // Table
                 const tbody = document.getElementById('q-table');
                 tbody.innerHTML = '';
-                if (res.last_bookings) {
+                if (res.last_bookings && res.last_bookings.length > 0) {
                     res.last_bookings.forEach(b => {
                         let statusColor = 'text-gray-500';
                         if (b.status === 'BOOKED') statusColor = 'text-blue-600 font-bold';
@@ -185,35 +236,50 @@
                             </tr>
                         `;
                     });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400">ยังไม่มีคิวในวันนี้</td></tr>`;
                 }
             }
         }
 
-        async function callNext() {
-            if (!confirm('ยืนยันเรียกคิวถัดไป?')) return;
-            const dept = document.getElementById('dept-select').value;
-            const btn = document.getElementById('btn-call');
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-
-            const res = await postAction("queue.callNext", { dept_id: dept, staff_pin: pin });
-
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-
+        async function markServed(qId) {
+            const res = await postAction("queue.markServed", { queue_id: qId, staff_pin: pin });
             if (res.ok) {
+                showToast('จบงานเรียบร้อย', 'success');
                 refreshDashboard();
-                // alert('เรียกคิว ' + res.called_queue_no);
             } else {
-                alert('Error: ' + res.error);
+                showToast('Error: ' + res.error, 'error');
             }
+        }
+        if (!confirm('ยืนยันเรียกคิวถัดไป?')) return;
+
+        // Custom loading for call button to keep icon
+        const btn = document.getElementById('btn-call');
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = `<svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="ml-2">กำลังเรียก...</span>`;
+        btn.disabled = true;
+        btn.classList.add('opacity-75');
+
+        const dept = document.getElementById('dept-select').value;
+        const res = await postAction("queue.callNext", { dept_id: dept, staff_pin: pin });
+
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        btn.classList.remove('opacity-75');
+
+        if (res.ok) {
+            refreshDashboard();
+            showToast(`เรียกคิว ${res.called_queue_no} สำเร็จ`, 'success');
+        } else {
+            showToast('Error: ' + res.error, 'error');
+        }
         }
 
         async function walkin() {
             const dept = document.getElementById('dept-select').value;
             const name = document.getElementById('walkin-name').value;
             const phone = document.getElementById('walkin-phone').value;
-            if (!name || !phone) return alert('กรอกข้อมูลให้ครบ');
+            if (!name || !phone) return showToast('กรุณากรอกชื่อและเบอร์โทร', 'error');
 
             const res = await postAction("queue.walkin", {
                 dept_id: dept, staff_pin: pin,
@@ -221,20 +287,28 @@
             });
 
             if (res.ok) {
-                alert('ออกคิวสำเร็จ: ' + res.queue_no);
+                showToast(`ออกตั๋วสำเร็จ: ${res.queue_no}`, 'success');
                 document.getElementById('walkin-name').value = '';
                 document.getElementById('walkin-phone').value = '';
                 refreshDashboard();
             } else {
-                alert(res.error);
+                showToast(res.error, 'error');
             }
         }
 
         async function setDayStatus(status) {
             if (!confirm(`ยืนยันเปลี่ยนสถานะเป็น ${status}?`)) return;
             const action = status === 'OPEN' ? 'day.open' : 'day.close';
-            await postAction(action, { staff_pin: pin });
-            alert('OK');
+
+            // setBtnLoading when we have IDs for these buttons
+            const res = await postAction(action, { staff_pin: pin });
+
+            if (res.ok) {
+                showToast('เปลี่ยนสถานะเรียบร้อย', 'success');
+                refreshDashboard();
+            } else {
+                showToast('Error: ' + res.error, 'error');
+            }
         }
 
         async function markServed(qId) {
