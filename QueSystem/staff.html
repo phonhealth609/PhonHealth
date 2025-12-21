@@ -39,11 +39,15 @@
                     <option value="CER">CER - ขอใบรับรองแพทย์</option>
                 </select>
             </div>
-            <div class="flex gap-2">
-                <button onclick="setDayStatus('OPEN')"
-                    class="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-bold hover:bg-green-200">เปิดระบบวันใหม่</button>
-                <button onclick="setDayStatus('CLOSED')"
-                    class="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold hover:bg-red-200">ปิดรับคิว</button>
+            <div class="flex gap-2 items-center">
+                <div id="system-status" class="px-4 py-2 rounded-lg font-bold text-white bg-gray-400">
+                    Loading...
+                </div>
+                <div class="h-8 w-px bg-gray-300 mx-2"></div>
+                <button onclick="setDayStatus('OPEN')" id="btn-open"
+                    class="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-bold hover:bg-green-200 transition">เปิดระบบ</button>
+                <button onclick="setDayStatus('CLOSED')" id="btn-close"
+                    class="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold hover:bg-red-200 transition">ปิดรับคิว</button>
                 <button onclick="logout()" class="text-gray-500 hover:text-gray-700 px-4">ออก</button>
             </div>
         </div>
@@ -137,6 +141,24 @@
             const res = await getAction("dashboard.summary", { dept_id: dept });
 
             if (res.ok) {
+                // Update Badge
+                const statusEl = document.getElementById('system-status');
+                const btnOpen = document.getElementById('btn-open');
+                const btnClose = document.getElementById('btn-close');
+
+                if (res.status === 'OPEN') {
+                    statusEl.textContent = '🟢 เปิดรับคิว';
+                    statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-green-500 shadow-lg border-2 border-green-600';
+                    // Visual cues for buttons
+                    btnOpen.classList.add('opacity-50', 'cursor-not-allowed', 'hidden');
+                    btnClose.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
+                } else {
+                    statusEl.textContent = '🔴 ปิดรับคิว';
+                    statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-red-500 shadow-lg border-2 border-red-600';
+                    btnOpen.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
+                    btnClose.classList.add('opacity-50', 'cursor-not-allowed', 'hidden');
+                }
+
                 document.getElementById('current-q-display').textContent = res.current_called_queue || '-';
 
                 // Table
