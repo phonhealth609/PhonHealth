@@ -138,12 +138,16 @@
                         `;
                     });
                 } else {
-                    listEl.innerHTML = `<p class="text-gray-500 text-center mt-10">ไม่มีคิวรอ</p>`;
+                    listEl.innerHTML = `<div class="p-4 text-center text-gray-500">ไม่มีคิวรอเรียก</div>`;
                 }
 
                 // Stats
                 document.getElementById('total-booked').textContent = res.totals.booked;
                 document.getElementById('total-served').textContent = res.totals.served;
+            } else {
+                console.error("Display refresh error:", res.error);
+                // Optional: Visual indicator of offline
+                document.getElementById('dept-name').textContent = '⚠️ Offline';
             }
         }
 

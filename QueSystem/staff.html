@@ -237,6 +237,17 @@
                 } else {
                     tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400">ยังไม่มีคิวในวันนี้</td></tr>`;
                 }
+            } else {
+                // Handle API error (e.g. network/server issue)
+                console.error("Dashboard refresh error:", res.error);
+                // Optionally show toast only if it's not a generic network blip to avoid spamming
+                // But for now, let's show it so user knows why it's "Loading..." forever
+                // showToast(res.error || 'Connection Failed', 'error'); 
+
+                // Better: Update the status badge to Error
+                const statusEl = document.getElementById('system-status');
+                statusEl.textContent = '⚠️ Offline';
+                statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-gray-500';
             }
         }
 
