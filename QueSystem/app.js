@@ -1,4 +1,4 @@
-const API_BASE = "https://script.google.com/macros/s/AKfycbyjjqNFskrdUfL5wgvN8aSrYKtRnOqj1dMaRoCFD-eDvvPQURCWOdtugdlOAisR0og/exec";
+const API_BASE = "https://script.google.com/macros/s/AKfycbwqRfaydCnfnLi1zyRHmmlcWIhkiBvEXo22eeXutO8Druu88ePzyKDWf5bC7tb1LkqIRw/exec";
 
 async function postAction(action, body) {
   try {
@@ -17,7 +17,7 @@ async function postAction(action, body) {
 
 async function getAction(action, params) {
   try {
-    const q = new URLSearchParams({ action, ...(params||{}) }).toString();
+    const q = new URLSearchParams({ action, ...(params || {}), _t: new Date().getTime() }).toString();
     const res = await fetch(`${API_BASE}?${q}`);
     return await res.json();
   } catch (e) {
