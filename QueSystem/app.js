@@ -1,14 +1,25 @@
-const API_BASE = "https://script.google.com/macros/s/AKfycbwqRfaydCnfnLi1zyRHmmlcWIhkiBvEXo22eeXutO8Druu88ePzyKDWf5bC7tb1LkqIRw/exec";
+const API_BASE = "https://script.google.com/macros/s/AKfycbwlJ9LxYTDXtFI8mrVJj7ndoZ8Duw9UE6OZhshBjNfpHKkJIvE0nWpTDnf5QeIsM3Rn/exec";
 
 async function postAction(action, body) {
   try {
     const url = `${API_BASE}?action=${encodeURIComponent(action)}`;
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // GAS often requires text/plain to avoid CORS preflight issues with JSON
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(body || {})
     });
-    return await res.json();
+
+    if (!res.ok) {
+      throw new Error(`HTTP Error: ${res.status}`);
+    }
+
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("Not JSON response:", text.substring(0, 100)); // Debug log first 100 chars
+      throw new Error("Invalid Server Response (Not JSON). Check Web App URL.");
+    }
   } catch (e) {
     console.error("API Error:", e);
     return { ok: false, error: e.message };
@@ -19,7 +30,18 @@ async function getAction(action, params) {
   try {
     const q = new URLSearchParams({ action, ...(params || {}), _t: new Date().getTime() }).toString();
     const res = await fetch(`${API_BASE}?${q}`);
-    return await res.json();
+
+    if (!res.ok) {
+      throw new Error(`HTTP Error: ${res.status}`);
+    }
+
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("Not JSON response:", text.substring(0, 100));
+      throw new Error("Invalid Server Response (Not JSON). Check Web App URL.");
+    }
   } catch (e) {
     console.error("API Error:", e);
     return { ok: false, error: e.message };
