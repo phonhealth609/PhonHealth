@@ -313,14 +313,7 @@
             }
         }
 
-        async function markServed(qId) {
-            const res = await postAction("queue.markServed", { queue_id: qId, staff_pin: pin });
-            if (res.ok) {
-                refreshDashboard();
-            } else {
-                alert('Error: ' + res.error);
-            }
-        }
+
 
         // Auto refresh
         setInterval(refreshDashboard, 5000);
