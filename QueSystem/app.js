@@ -1,4 +1,4 @@
-const API_BASE = "https://script.google.com/macros/s/AKfycbwlJ9LxYTDXtFI8mrVJj7ndoZ8Duw9UE6OZhshBjNfpHKkJIvE0nWpTDnf5QeIsM3Rn/exec";
+const API_BASE = "https://script.google.com/macros/s/AKfycbxm36d7d87bKxHE7C18aMSUxyIQ0d27kyQV78OQXoaLkxW_m7DiNrkJe8cnGbKxKPev/exec";
 
 async function postAction(action, body) {
   try {
