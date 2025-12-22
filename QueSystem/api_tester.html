@@ -36,9 +36,8 @@
             <h2 class="text-xl font-bold mb-4 text-blue-400">Configuration</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-gray-400 text-sm mb-1">API URL</label>
+                    <label class="block text-gray-400 text-sm mb-1">API URL (Auto-loaded)</label>
                     <input id="api-url" type="text"
-                        value="https://script.google.com/macros/s/AKfycbwlJ9LxYTDXtFI8mrVJj7ndoZ8Duw9UE6OZhshBjNfpHKkJIvE0nWpTDnf5QeIsM3Rn/exec"
                         class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-green-400 font-mono">
                 </div>
                 <div>
@@ -68,7 +67,18 @@
         </div>
     </div>
 
+    <script src="./app.js"></script>
     <script>
+        // Auto-fill API URL from app.js
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof API_BASE !== 'undefined') {
+                document.getElementById('api-url').value = API_BASE;
+                log(`ℹ️ Auto-loaded API URL from app.js: ${API_BASE.substring(0, 30)}...`, 'info');
+            } else {
+                log('⚠️ Could not load API_BASE from app.js', 'error');
+            }
+        });
+
         // --- Core Fetch Logic (Copied/Adapted from app.js) ---
         async function postAction(action, body) {
             const API_BASE = document.getElementById('api-url').value.trim();
