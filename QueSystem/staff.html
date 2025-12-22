@@ -188,6 +188,7 @@
             const res = await getAction("dashboard.summary", { dept_id: dept });
 
             if (res.ok) {
+                toggleControls(true);
                 // Update Badge
                 const statusEl = document.getElementById('system-status');
                 const btnOpen = document.getElementById('btn-open');
@@ -246,8 +247,23 @@
 
                 // Better: Update the status badge to Error
                 const statusEl = document.getElementById('system-status');
-                statusEl.textContent = '⚠️ Offline';
-                statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-gray-500';
+                statusEl.innerHTML = '⚠️ <b>เชื่อมต่อไม่ได้</b>';
+                statusEl.className = 'px-4 py-2 rounded-lg font-bold text-white bg-red-600 animate-pulse border-2 border-red-800 shadow-lg';
+
+                const tbody = document.getElementById('q-table');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 text-center bg-red-50 rounded-lg">
+                            <div class="text-red-600 font-bold text-xl mb-2">⚠️ ไม่สามารถดึงข้อมูลได้</div>
+                            <div class="text-gray-600 text-sm mb-4">กรุณาตรวจสอบอินเทอร์เน็ต หรือ Web App URL</div>
+                            <button onclick="refreshDashboard()" class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-bold py-2 px-6 rounded-full shadow transition transform active:scale-95">
+                                🔄 ลองใหม่ (Retry)
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                toggleControls(false);
             }
         }
 
@@ -343,6 +359,18 @@
             document.getElementById('auth-modal').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             refreshDashboard();
+        }
+
+        function toggleControls(enable) {
+            const ids = ['btn-call', 'btn-open', 'btn-close', 'walkin-name', 'walkin-phone'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = !enable;
+                    if (!enable) el.classList.add('opacity-50', 'cursor-not-allowed');
+                    else el.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
         }
 
         setInterval(refreshDashboard, 5000);
