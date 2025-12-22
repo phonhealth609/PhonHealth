@@ -89,6 +89,98 @@
             }
         }
 
+        function generateFlexMessage(data) {
+            return {
+                "type": "flex",
+                "altText": `บัตรคิวของคุณ: ${data.queue_no}`,
+                "contents": {
+                    "type": "bubble",
+                    "hero": {
+                        "type": "image",
+                        "url": "https://cdn-icons-png.flaticon.com/512/3652/3652191.png",
+                        "size": "full",
+                        "aspectRatio": "20:13",
+                        "aspectMode": "cover",
+                        "action": { "type": "uri", "uri": "https://line.me/" }
+                    },
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "บัตรคิวออนไลน์",
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": "#1DB446"
+                            },
+                            {
+                                "type": "text",
+                                "text": data.dept_name,
+                                "weight": "bold",
+                                "size": "md",
+                                "margin": "md"
+                            },
+                            {
+                                "type": "text",
+                                "text": data.queue_no,
+                                "weight": "bold",
+                                "size": "5xl",
+                                "align": "center",
+                                "margin": "lg",
+                                "color": "#111111"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "margin": "lg",
+                                "spacing": "sm",
+                                "contents": [
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            { "type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 2 },
+                                            { "type": "text", "text": data.date, "wrap": true, "color": "#666666", "size": "sm", "flex": 5 }
+                                        ]
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            { "type": "text", "text": "รออีก", "color": "#aaaaaa", "size": "sm", "flex": 2 },
+                                            { "type": "text", "text": `${data.wait} คิว`, "wrap": true, "color": "#666666", "size": "sm", "flex": 5 }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "footer": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "style": "link",
+                                "height": "sm",
+                                "action": {
+                                    "type": "uri",
+                                    "label": "ตรวจสอบสถานะ",
+                                    "uri": "https://liff.line.me/2006737222-8RQEYchi" // Placeholder
+                                }
+                            }
+                        ],
+                        "flex": 0
+                    }
+                }
+            };
+        }
+
+
         async function initLiff() {
             try {
                 // Initialize LIFF specific to user's LIFF ID if provided, otherwise leave as placeholder or rely on external browser context if not strict LIFF
@@ -140,12 +232,21 @@
             resultDiv.classList.remove('hidden');
 
             if (res.ok) {
-                if (res.flex_reply && liff.isInClient()) {
+                // Generate Flex Message (Frontend Side)
+                const flexMsg = generateFlexMessage({
+                    queue_no: res.queue_no,
+                    dept_name: res.dept_name,
+                    wait: res.ahead_count,
+                    date: new Date().toLocaleDateString('th-TH')
+                });
+
+                if (liff.isInClient()) {
                     try {
-                        await liff.sendMessages(Array.isArray(res.flex_reply) ? res.flex_reply : [res.flex_reply]);
+                        await liff.sendMessages([flexMsg]);
+                        console.log("Flex sent via LIFF");
                     } catch (err) {
                         console.error("Error sending Flex Message:", err);
-                        // Optional: show a small toast or alert? for now ignore
+                        // Can show specific error if permission denied
                     }
                 }
 
