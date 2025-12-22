@@ -56,9 +56,9 @@
                         placeholder="XXXX">
                 </div>
 
-                <button type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-95">
-                    ยืนยันจองคิว
+                <button type="submit" id="btn-submit" disabled
+                    class="w-full bg-gray-400 text-white font-bold py-3 rounded-xl shadow-lg transform transition cursor-not-allowed">
+                    กำลังโหลดระบบ...
                 </button>
             </form>
 
@@ -106,6 +106,13 @@
                 console.warn("LIFF Init Failed (likely invalid ID for localhost/testing):", e);
                 // Fallback for non-LIFF environment
                 lineUserId = "NON_LIFF_USER";
+            } finally {
+                // Enable Button
+                const btn = document.getElementById('btn-submit');
+                btn.disabled = false;
+                btn.innerText = 'ยืนยันจองคิว';
+                btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'hover:scale-[1.02]', 'active:scale-95');
             }
         }
         initLiff();
