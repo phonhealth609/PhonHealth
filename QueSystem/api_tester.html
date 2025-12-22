@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <title>API Tester - PCU Phon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .log-entry {
+            font-family: monospace;
+            border-bottom: 1px solid #333;
+            padding: 4px 0;
+        }
+
+        .success {
+            color: #4ade80;
+        }
+
+        .error {
+            color: #f87171;
+        }
+
+        .info {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🛠️ API System Tester</h1>
+
+        <!-- Config -->
+        <div class="bg-gray-800 p-6 rounded-xl mb-6 border border-gray-700">
+            <h2 class="text-xl font-bold mb-4 text-blue-400">Configuration</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-400 text-sm mb-1">API URL</label>
+                    <input id="api-url" type="text"
+                        value="https://script.google.com/macros/s/AKfycbwlJ9LxYTDXtFI8mrVJj7ndoZ8Duw9UE6OZhshBjNfpHKkJIvE0nWpTDnf5QeIsM3Rn/exec"
+                        class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-green-400 font-mono">
+                </div>
+                <div>
+                    <label class="block text-gray-400 text-sm mb-1">Staff PIN</label>
+                    <input id="staff-pin" type="text" value="1234"
+                        class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm font-mono">
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex gap-4 mb-6">
+            <button onclick="runTestSuite()"
+                class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition">
+                ▶ Run Full Test Suite
+            </button>
+            <button onclick="clearLogs()"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                Clear Logs
+            </button>
+        </div>
+
+        <!-- Logs -->
+        <div class="bg-gray-950 rounded-xl border border-gray-700 p-6 h-[500px] overflow-y-auto font-mono text-sm shadow-inner"
+            id="console-output">
+            <div class="text-gray-500">Ready to test...</div>
+        </div>
+    </div>
+
+    <script>
+        // --- Core Fetch Logic (Copied/Adapted from app.js) ---
+        async function postAction(action, body) {
+            const API_BASE = document.getElementById('api-url').value.trim();
+            try {
+                const url = `${API_BASE}?action=${encodeURIComponent(action)}`;
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(body || {})
+                });
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                const text = await res.text();
+                try {
+                    return JSON.parse(text);
+                } catch {
+                    throw new Error("Invalid JSON: " + text.substring(0, 50));
+                }
+            } catch (e) {
+                return { ok: false, error: e.message };
+            }
+        }
+
+        async function getAction(action, params) {
+            const API_BASE = document.getElementById('api-url').value.trim();
+            try {
+                const q = new URLSearchParams({ action, ...(params || {}), _t: new Date().getTime() }).toString();
+                const res = await fetch(`${API_BASE}?${q}`);
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                const text = await res.text();
+                try {
+                    return JSON.parse(text);
+                } catch {
+                    throw new Error("Invalid JSON: " + text.substring(0, 50));
+                }
+            } catch (e) {
+                return { ok: false, error: e.message };
+            }
+        }
+
+        // --- Logger ---
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            div.innerText = `[${time}] ${msg}`;
+            const c = document.getElementById('console-output');
+            c.appendChild(div);
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('console-output').innerHTML = '';
+        }
+
+        // --- Tests ---
+        async function runTestSuite() {
+            clearLogs();
+            const start = performance.now();
+            log("🚀 Starting Test Suite...", 'info');
+
+            const pin = document.getElementById('staff-pin').value;
+            let capturedQueueId = null;
+
+            // 1. Health Check
+            log("1. Checking Dashboard/System Status...", 'info');
+            const res1 = await getAction('dashboard.summary', { dept_id: 'NCD' });
+            if (res1.ok) {
+                log(`✅ System Online | Status: ${res1.status} | Dept: ${res1.dept_name}`, 'success');
+            } else {
+                log(`❌ System Offline or Error: ${res1.error}`, 'error');
+                return; // Stop if offline
+            }
+
+            // 2. Booking
+            log("2. Testing Patient Booking...", 'info');
+            const mockUser = "TEST_USER_" + Math.floor(Math.random() * 1000);
+            const res2 = await postAction('queue.book', {
+                dept_id: 'NCD',
+                patient_label: 'นายทดสอบ ระบบ',
+                phone_last4: '9999',
+                line_user_id: mockUser
+            });
+
+            if (res2.ok) {
+                log(`✅ Booking Success! Queue No: ${res2.queue_no}`, 'success');
+                capturedQueueId = res2.queue_id; // Capture for later (Wait... queue.book returns queue_id? Yes)
+            } else {
+                log(`❌ Booking Failed: ${res2.error}`, 'error');
+            }
+
+            // 3. Duplicate Check
+            log("3. Testing Duplicate Booking Prevention...", 'info');
+            const res3 = await postAction('queue.book', {
+                dept_id: 'NCD',
+                patient_label: 'นายทดสอบ ระบบ',
+                phone_last4: '9999',
+                line_user_id: mockUser // Same user
+            });
+            if (res3.ok && res3.reused) {
+                log(`✅ Duplicate Blocked Correctly. Returned Existing: ${res3.queue_no}`, 'success');
+            } else if (res3.ok && !res3.reused) {
+                log(`⚠️ Warning: Duplicate check failed? Created new queue: ${res3.queue_no}`, 'error');
+            } else {
+                log(`❌ Error in Duplicate Check: ${res3.error}`, 'error');
+            }
+
+            // 4. Walk-in
+            log("4. Testing Staff Walk-in...", 'info');
+            const res4 = await postAction('queue.walkin', {
+                dept_id: 'NCD',
+                staff_pin: pin,
+                patient_label: 'Walk-in Test',
+                phone_last4: '8888'
+            });
+            if (res4.ok) {
+                log(`✅ Walk-in Success! Queue No: ${res4.queue_no}`, 'success');
+            } else {
+                log(`❌ Walk-in Failed: ${res4.error}`, 'error');
+            }
+
+            // 5. Call Next
+            log("5. Testing Call Next (Staff)...", 'info');
+            const res5 = await postAction('queue.callNext', {
+                dept_id: 'NCD',
+                staff_pin: pin
+            });
+            if (res5.ok) {
+                log(`✅ Call Success! Called: ${res5.called_queue_no}`, 'success');
+            } else {
+                log(`❌ Call Failed: ${res5.error}`, 'error');
+            }
+
+            // 6. Mark Served (if we captured an ID from step 2, assume it was the one called? Not guaranteed)
+            // Let's use the ID returned from 'Call Next' if available, otherwise skip
+            if (res5.ok && res5.called_queue_id) {
+                log(`6. Testing Mark Served for ${res5.called_queue_no}...`, 'info');
+                const res6 = await postAction('queue.markServed', {
+                    queue_id: res5.called_queue_id,
+                    staff_pin: pin
+                });
+                if (res6.ok) {
+                    log(`✅ Mark Served Success!`, 'success');
+                } else {
+                    log(`❌ Mark Served Failed: ${res6.error}`, 'error');
+                }
+            } else {
+                log("⚠️ Skipping Mark Served (No queue was called)", 'info');
+            }
+
+            const end = performance.now();
+            log(`🏁 Test Suite Finished in ${((end - start) / 1000).toFixed(2)}s`, 'info');
+        }
+    </script>
+</body>
+
+</html>
