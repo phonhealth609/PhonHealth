@@ -48,7 +48,7 @@ async function getAction(action, params) {
   }
 }
 
-// Utility to format queue number with color
+// Utility to format queue number with color   
 function formatQueueColor(status) {
   switch (status) {
     case 'CALLED': return 'text-green-600';
@@ -56,3 +56,6 @@ function formatQueueColor(status) {
     default: return 'text-blue-600';
   }
 }
+
+
+
